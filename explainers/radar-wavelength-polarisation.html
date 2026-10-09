@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radar that brings its own light: wavelength and polarisation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E8EDEF; --panel:#FFFFFF; --ink:#16232D; --muted:#566874; --rule:#C6D0D6;
+  --sky:#DCE6EC; --cloud:#FFFFFF; --leaf:#3E8A55; --leaf2:#2F6F44; --trunk:#7A5232;
+  --sand:#E2C796; --sanddeep:#C9A66B; --ruin:#8C7B6B; --wetsand:#9C8461; --water:#3F78B5;
+  --wall:#B9B2A8; --ground:#9A8F7E;
+  --v:#2F6FE0; --h:#E0702E; --hit:#E0702E; --focus:#1F6FE0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F161C; --panel:#17212A; --ink:#E2E9ED; --muted:#93A4AF; --rule:#2B3944;
+    --sky:#1B2731; --cloud:#3A4853; --leaf:#4E9A64; --leaf2:#3B7F51; --trunk:#9A6E48;
+    --sand:#8E7A55; --sanddeep:#6E5D40; --ruin:#B3A08C; --wetsand:#5C4E3A; --water:#4E8BCB;
+    --wall:#7D766C; --ground:#5E5547;
+    --v:#6EA2FF; --h:#FF9A57; --hit:#FF9A57; --focus:#7FB2FF;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F161C; --panel:#17212A; --ink:#E2E9ED; --muted:#93A4AF; --rule:#2B3944;
+  --sky:#1B2731; --cloud:#3A4853; --leaf:#4E9A64; --leaf2:#3B7F51; --trunk:#9A6E48;
+  --sand:#8E7A55; --sanddeep:#6E5D40; --ruin:#B3A08C; --wetsand:#5C4E3A; --water:#4E8BCB;
+  --wall:#7D766C; --ground:#5E5547;
+  --v:#6EA2FF; --h:#FF9A57; --hit:#FF9A57; --focus:#7FB2FF;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.55}
+main{max-width:1000px;margin:0 auto;padding:40px 20px 64px}
+h1{font-stretch:125%;font-weight:800;font-size:clamp(2rem,6vw,3.6rem);line-height:1.02;letter-spacing:-0.01em;margin:0 0 16px;max-width:15ch}
+h2{font-stretch:112%;font-weight:700;font-size:1.5rem;margin:0 0 6px}
+h3{font-stretch:112%;font-size:1.1rem;margin:0 0 6px}
+p{margin:0 0 12px;max-width:66ch}
+.lede{font-size:1.15rem;color:var(--muted);max-width:58ch}
+section{margin-top:48px}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:18px}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.seg{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.seg button{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 14px;text-align:left;line-height:1.2}
+.seg button small{display:block;color:var(--muted);font-size:.8rem}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.seg button[aria-pressed="true"] small{color:var(--paper);opacity:.75}
+.svg-wrap{overflow-x:auto;border-radius:10px}
+svg{display:block;width:100%;height:auto}
+#scene{min-width:620px}
+svg text{fill:var(--ink);font-family:inherit}
+.lbl{font-size:13px;font-weight:600}
+.sub{font-size:12px;fill:var(--muted)!important}
+.toggle{display:flex;align-items:center;gap:10px;margin:10px 0 0}
+.toggle input{width:18px;height:18px;accent-color:var(--ink)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;margin-top:14px;align-items:baseline}
+.facts .big{grid-row:span 3;font-stretch:125%;font-weight:800;font-size:3rem;line-height:1}
+.facts p{margin:0}
+.facts .meta{color:var(--muted);font-size:.95rem}
+.ruler{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:16px}
+.ruler div{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+.ruler span.bar{height:8px;border-radius:4px;background:var(--rule)}
+.ruler div.on span.bar{background:var(--ink)}
+.ruler div.on{color:var(--ink);font-weight:600}
+.twin{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:640px){.twin{grid-template-columns:1fr}}
+.wavebox h3{display:flex;align-items:center;gap:10px}
+.wavebox .tag{font-stretch:125%;font-weight:800;font-size:1.6rem}
+.pol{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px;align-items:start}
+@media (max-width:760px){.pol{grid-template-columns:1fr}}
+.meter{margin:10px 0}
+.meter .row{display:flex;justify-content:space-between;font-size:.92rem;margin-bottom:4px}
+.meter .track{height:12px;border-radius:6px;background:var(--rule);overflow:hidden}
+.meter .fill{height:100%;border-radius:6px;transition:width .35s}
+.swatches{display:flex;gap:12px;margin:14px 0 4px}
+.swatches figure{margin:0;text-align:center;font-size:.85rem;color:var(--muted)}
+.swatches .px{width:72px;height:72px;border-radius:8px;border:1px solid var(--rule);transition:background .35s}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.88rem;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:18px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.takeaways{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:14px}
+.takeaways .card p{margin:0}
+footer{margin-top:48px;color:var(--muted);font-size:.85rem}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Radar brings its own light</h1>
+    <p class="lede">Optical satellites need sunlight. Radar satellites send their own microwave pulses and listen for the echo, day or night, through clouds and smoke. Two choices shape what radar sees: how long its waves are, and which way they shake.</p>
+  </header>
+
+  <section aria-labelledby="w">
+    <h2 id="w">Wavelength decides how deep radar sees</h2>
+    <p>A wave mostly ignores things much smaller than itself and bounces off things its own size or larger. Short waves stop at the leaves. Long waves slip past them to branches, trunks and even into dry sand. Choose a radar band.</p>
+    <div class="seg" id="bandBtns" role="group" aria-label="Radar band"></div>
+    <div class="card">
+      <div class="svg-wrap"><svg id="scene" viewBox="0 0 900 420" role="img" aria-label="Cross-section of a forest and a desert with buried ruins, showing how far each radar band penetrates"></svg></div>
+      <div class="toggle"><input type="checkbox" id="wet"><label for="wet">Wet ground after rain</label></div>
+      <div class="facts" id="facts" aria-live="polite"></div>
+      <div class="ruler" id="ruler" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="p">
+    <h2 id="p">Polarisation: which way the wave shakes</h2>
+    <p>Shake a rope up and down and the wave is vertical. Shake it side to side and it is horizontal. A radar chooses the direction it sends, and listens in one or both directions. Sentinel-1 sends vertical over land and listens to both, giving the two images you see in every Sentinel-1 product: VV and VH.</p>
+    <div class="twin">
+      <div class="card wavebox"><h3><span class="tag" style="color:var(--v)">V</span>Vertical: shakes up and down</h3><canvas id="cv" width="420" height="150" style="width:100%;height:auto" aria-label="Animated vertical wave"></canvas></div>
+      <div class="card wavebox"><h3><span class="tag" style="color:var(--h)">H</span>Horizontal: shakes side to side</h3><canvas id="ch" width="420" height="150" style="width:100%;height:auto" aria-label="Animated horizontal wave"></canvas></div>
+    </div>
+
+    <h3 style="margin-top:28px">What comes back depends on what it hits</h3>
+    <p>The satellite sends a vertical wave. VV is the echo that comes back still vertical. VH is the echo that comes back turned sideways, which only happens when the wave bounces around inside something messy, like a tree crown. Pick a target.</p>
+    <div class="seg" id="targetBtns" role="group" aria-label="Target"></div>
+    <div class="pol">
+      <div class="card"><div class="svg-wrap"><svg id="bounce" viewBox="0 0 600 300" role="img" aria-label="How the radar wave bounces off the selected target"></svg></div>
+        <div class="legend"><span><i style="background:var(--v)"></i>Sent and returned vertical (VV)</span><span><i style="background:var(--h)"></i>Returned turned sideways (VH)</span></div>
+      </div>
+      <div class="card">
+        <div id="ttext" aria-live="polite"></div>
+        <div class="meter"><div class="row"><span>VV echo</span><span id="vvdb"></span></div><div class="track"><div class="fill" id="vvbar" style="background:var(--v)"></div></div></div>
+        <div class="meter"><div class="row"><span>VH echo</span><span id="vhdb"></span></div><div class="track"><div class="fill" id="vhbar" style="background:var(--h)"></div></div></div>
+        <p class="sub" style="font-size:.85rem;color:var(--muted);margin-top:10px">How it looks in the image</p>
+        <div class="swatches"><figure><div class="px" id="vvpx"></div>VV</figure><figure><div class="px" id="vhpx"></div>VH</figure></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="k">
+    <h2 id="k">What to remember</h2>
+    <div class="takeaways">
+      <div class="card"><h3>Dark means smooth or empty</h3><p>Calm water and smooth tarmac bounce the pulse away like a mirror. Very dark patches on land can reveal floods.</p></div>
+      <div class="card"><h3>Bright means corners</h3><p>Buildings form corners with the ground that throw the pulse straight back. When a building is destroyed, the bright spot fades.</p></div>
+      <div class="card"><h3>VH is a vegetation detector</h3><p>Only messy, three-dimensional targets like tree crowns twist the wave. Compare VV and VH to tell crops and forest from buildings.</p></div>
+      <div class="card"><h3>Free radar is C-band</h3><p>Sentinel-1 is free and global. Longer bands from ALOS-2, NISAR or BIOMASS see deeper but data access varies.</p></div>
+    </div>
+  </section>
+  <footer>Penetration depths and echo strengths are simplified for teaching. Real values depend on incidence angle, moisture and surface details.</footer>
+</main>
+
+<script>
+(function(){
+  var NS='http://www.w3.org/2000/svg';
+  function el(tag,attrs,parent,text){ var e=document.createElementNS(NS,tag); for(var a in attrs) e.setAttribute(a,attrs[a]); if(text!==undefined) e.textContent=text; parent.appendChild(e); return e; }
+  function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ================= Wavelength scene =================
+  var BANDS=[
+    {id:'X', cm:3.1, lam:9, sats:'TerraSAR-X, ICEYE, Capella', note:'commercial, often paid',
+      forest:150, forestTxt:'Bounces off the top leaves', dry:300, dryTxt:'Bounces off the sand surface',
+      text:'Short waves bounce off the very top of things: leaves, rooftops, vehicles. X-band gives the sharpest detail, so commercial satellites use it to watch ships, aircraft and buildings.'},
+    {id:'C', cm:5.6, lam:15, sats:'Sentinel-1, RADARSAT', note:'Sentinel-1 is free',
+      forest:182, forestTxt:'Scatters in leaves and small branches', dry:306, dryTxt:'Enters the sand a little',
+      text:'The free workhorse. C-band scatters from leaves and small branches and reaches partly into vegetation. Ideal for floods, damage, ships and ground movement in towns.'},
+    {id:'L', cm:24, lam:52, sats:'ALOS-2, NISAR', note:'NISAR data is open',
+      forest:262, forestTxt:'Passes leaves, hits branches and trunks', dry:330, dryTxt:'Penetrates dry sand',
+      text:'Long enough to ignore leaves. L-band reaches branches, trunks and the ground below, so it tracks deforestation and ground movement under vegetation. In very dry sand it can reveal buried features.'},
+    {id:'P', cm:70, lam:130, sats:'ESA BIOMASS', note:'launched 2025',
+      forest:298, forestTxt:'Reaches trunks and the ground', dry:352, dryTxt:'Reaches the buried ruins',
+      text:'The longest radar band in orbit. P-band slips through whole forests to measure how much wood they hold, which is how BIOMASS weighs the world\'s forests.'}
+  ];
+  var scene=document.getElementById('scene');
+  var GROUND=300;
+  // sky
+  el('rect',{x:0,y:0,width:900,height:GROUND,fill:'var(--sky)'},scene);
+  // cloud
+  var cloud=el('g',{opacity:.9},scene);
+  [[330,70,46,22],[380,58,52,28],[440,68,48,24],[500,74,40,18],[620,64,46,22],[670,56,50,26],[725,68,40,20]].forEach(function(c){ el('ellipse',{cx:c[0],cy:c[1],rx:c[2],ry:c[3],fill:'var(--cloud)'},cloud); });
+  el('text',{x:780,y:44,class:'sub'},scene,'Clouds and smoke:');
+  el('text',{x:780,y:60,class:'sub'},scene,'all bands pass');
+  // ground: forest floor left, desert right
+  el('rect',{x:0,y:GROUND,width:480,height:120,fill:'var(--ground)'},scene);
+  var sand=el('rect',{x:480,y:GROUND,width:420,height:120,fill:'var(--sand)'},scene);
+  var sandDeep=el('rect',{x:480,y:GROUND+40,width:420,height:80,fill:'var(--sanddeep)'},scene);
+  // buried ruins
+  var ruin=el('g',{},scene);
+  [[640,340,30,22],[676,346,22,16],[704,336,40,26],[750,344,24,18]].forEach(function(r){ el('rect',{x:r[0],y:r[1],width:r[2],height:r[3],fill:'var(--ruin)',rx:2},ruin); });
+  el('text',{x:780,y:358,class:'sub'},scene,'buried ruins');
+  // trees
+  var trees=el('g',{},scene);
+  [70,165,260,355,445].forEach(function(x,i){
+    el('rect',{x:x-6,y:205,width:12,height:GROUND-205,fill:'var(--trunk)'},trees);
+    el('path',{d:'M'+x+' 240 L'+(x-30)+' 205 M'+x+' 228 L'+(x+32)+' 196 M'+x+' 215 L'+(x-18)+' 182',stroke:'var(--trunk)','stroke-width':4,fill:'none','stroke-linecap':'round'},trees);
+    var cy=165+(i%2)*6;
+    el('ellipse',{cx:x,cy:cy,rx:52,ry:40,fill:'var(--leaf2)'},trees);
+    for(var k=0;k<14;k++){
+      var a=k/14*Math.PI*2, rr=18+((k*37)%20);
+      el('ellipse',{cx:x+Math.cos(a)*rr,cy:cy+Math.sin(a)*rr*0.7,rx:12,ry:7,fill:'var(--leaf)',transform:'rotate('+(k*29)+' '+(x+Math.cos(a)*rr)+' '+(cy+Math.sin(a)*rr*0.7)+')'},trees);
+    }
+  });
+  el('text',{x:20,y:GROUND+30,class:'lbl'},scene,'Forest');
+  el('text',{x:500,y:GROUND+30,class:'lbl'},scene,'Dry desert');
+  var wetLabel=el('text',{x:500,y:GROUND+30,class:'lbl'},scene,'');
+  // beams layer
+  var beams=el('g',{},scene);
+
+  function wavePath(cx,y0,y1,lam,amp){
+    var d='M'+cx+' '+y0;
+    for(var y=y0;y<=y1;y+=2){ d+=' L'+(cx+amp*Math.sin((y-y0)/lam*Math.PI*2)).toFixed(1)+' '+y; }
+    return d;
+  }
+  function drawBeam(cx,stopY,label,anchor){
+    el('line',{x1:cx,y1:10,x2:cx,y2:stopY,stroke:'var(--v)','stroke-width':1.5,'stroke-dasharray':'4 4',opacity:.6},beams);
+    el('path',{d:wavePath(cx,10,stopY,cur.lam,9),stroke:'var(--v)','stroke-width':3,fill:'none','stroke-linecap':'round'},beams);
+    el('circle',{cx:cx,cy:stopY,r:12,fill:'var(--hit)',opacity:.25,class:'pulse'},beams);
+    el('circle',{cx:cx,cy:stopY,r:5,fill:'var(--hit)'},beams);
+    // echo arrow
+    var ex=cx+22;
+    el('line',{x1:ex,y1:stopY-6,x2:ex,y2:stopY-56,stroke:'var(--hit)','stroke-width':2.5},beams);
+    el('path',{d:'M'+(ex-6)+' '+(stopY-48)+' L'+ex+' '+(stopY-58)+' L'+(ex+6)+' '+(stopY-48),stroke:'var(--hit)','stroke-width':2.5,fill:'none'},beams);
+    var tx = anchor==='end'? cx-14 : ex+10;
+    var bg=el('text',{x:tx,y:stopY-24,class:'lbl','text-anchor':anchor,stroke:'var(--panel)','stroke-width':5,'paint-order':'stroke'},beams,label);
+  }
+
+  var cur=BANDS[1];
+  var wetBox=document.getElementById('wet');
+  function renderScene(){
+    while(beams.firstChild) beams.removeChild(beams.firstChild);
+    var wet=wetBox.checked;
+    sand.setAttribute('fill', wet?'var(--wetsand)':'var(--sand)');
+    sandDeep.setAttribute('fill', wet?'var(--wetsand)':'var(--sanddeep)');
+    document.querySelectorAll('#scene text.lbl')[1].textContent = wet?'Wet desert':'Dry desert';
+    var dryStop = wet ? 302 : cur.dry;
+    var dryTxt = wet ? 'Water blocks it at the surface' : cur.dryTxt;
+    drawBeam(355,cur.forest,cur.forestTxt,'end');
+    drawBeam(700,dryStop,dryTxt,'start');
+    var f=document.getElementById('facts');
+    f.innerHTML='<div class="big">'+cur.id+'</div><p><strong>'+cur.id+'-band, about '+cur.cm+' cm waves</strong></p><p class="meta">'+cur.sats+' ('+cur.note+')</p><p>'+cur.text+'</p>';
+    var r=document.getElementById('ruler');
+    r.innerHTML=BANDS.map(function(b){ return '<div class="'+(b===cur?'on':'')+'"><span class="bar" style="width:'+Math.max(8,b.cm*3.4)+'px"></span>'+b.id+' '+b.cm+' cm</div>'; }).join('')+'<div>Real wave lengths to scale</div>';
+  }
+  var bandBox=document.getElementById('bandBtns'), bandBtns=[];
+  BANDS.forEach(function(b){
+    var btn=document.createElement('button');
+    btn.innerHTML=b.id+'-band<small>'+b.cm+' cm</small>';
+    btn.setAttribute('aria-pressed', b===cur?'true':'false');
+    btn.addEventListener('click',function(){ cur=b; bandBtns.forEach(function(x){ x.setAttribute('aria-pressed', x===btn?'true':'false'); }); renderScene(); });
+    bandBox.appendChild(btn); bandBtns.push(btn);
+  });
+  wetBox.addEventListener('change',renderScene);
+  renderScene();
+
+  // ================= Polarisation waves =================
+  function setupWave(id,mode){
+    var c=document.getElementById(id), ctx=c.getContext('2d');
+    var phase=0;
+    function frame(){
+      var W=c.width,H=c.height,mid=H/2;
+      ctx.clearRect(0,0,W,H);
+      var col=cssVar(mode==='V'?'--v':'--h'), muted=cssVar('--rule');
+      // axis of travel
+      ctx.strokeStyle=muted; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(10,mid); ctx.lineTo(W-14,mid); ctx.stroke();
+      ctx.fillStyle=muted; ctx.beginPath(); ctx.moveTo(W-6,mid); ctx.lineTo(W-16,mid-6); ctx.lineTo(W-16,mid+6); ctx.fill();
+      // field vectors
+      ctx.strokeStyle=col; ctx.lineWidth=2;
+      var pts=[];
+      for(var x=16;x<W-24;x+=12){
+        var a=Math.sin(x/36 - phase)*46;
+        var dx,dy;
+        if(mode==='V'){ dx=0; dy=-a; } else { dx=a*0.55; dy=a*0.32; }
+        ctx.globalAlpha=.55; ctx.beginPath(); ctx.moveTo(x,mid); ctx.lineTo(x+dx,mid+dy); ctx.stroke();
+        pts.push([x+dx,mid+dy]);
+      }
+      ctx.globalAlpha=1; ctx.lineWidth=3; ctx.beginPath();
+      pts.forEach(function(p,i){ if(i) ctx.lineTo(p[0],p[1]); else ctx.moveTo(p[0],p[1]); }); ctx.stroke();
+      if(mode==='H'){ ctx.fillStyle=cssVar('--muted'); ctx.font='12px Archivo, system-ui'; ctx.fillText('seen at an angle: it moves toward and away from you',12,H-8); }
+      else { ctx.fillStyle=cssVar('--muted'); ctx.font='12px Archivo, system-ui'; ctx.fillText('moves up and down as it travels',12,H-8); }
+      if(!reduce){ phase+=0.06; requestAnimationFrame(frame); }
+    }
+    frame();
+  }
+  setupWave('cv','V'); setupWave('ch','H');
+
+  // ================= Bounce diagram =================
+  var TARGETS=[
+    {id:'water', label:'Calm water', vv:-24, vh:-30,
+      title:'Calm water: mirror reflection',
+      text:'The smooth surface reflects the pulse away, like a mirror, so almost nothing returns. Water looks black in both VV and VH, which is why radar maps floods so well.'},
+    {id:'field', label:'Rough field', vv:-12, vh:-20,
+      title:'Rough field: surface scattering',
+      text:'Bumps and clods scatter the pulse in many directions and some comes back. The wave keeps its direction, so the field is mid-grey in VV and darker in VH.'},
+    {id:'forest', label:'Forest', vv:-8, vh:-13,
+      title:'Forest: volume scattering',
+      text:'Inside the crown the wave bounces between leaves and branches many times, and it comes back twisted. That makes forests unusually bright in VH, which is why VH works as a vegetation detector.'},
+    {id:'building', label:'Building', vv:1, vh:-9,
+      title:'Building: double bounce',
+      text:'The pulse hits the ground, then the wall, and shoots straight back like a ball in a corner. Buildings are the brightest things in VV. When a building collapses, this corner disappears, which is how radar detects destruction.'}
+  ];
+  var bsvg=document.getElementById('bounce');
+  function arrowLine(x1,y1,x2,y2,color,w,parent){
+    el('line',{x1:x1,y1:y1,x2:x2,y2:y2,stroke:color,'stroke-width':w,'stroke-linecap':'round'},parent);
+    var ang=Math.atan2(y2-y1,x2-x1), L=10+w;
+    var p1=[x2-L*Math.cos(ang-0.45),y2-L*Math.sin(ang-0.45)], p2=[x2-L*Math.cos(ang+0.45),y2-L*Math.sin(ang+0.45)];
+    el('path',{d:'M'+p1+' L'+x2+','+y2+' L'+p2,stroke:color,'stroke-width':w,fill:'none','stroke-linecap':'round','stroke-linejoin':'round'},parent);
+  }
+  function satellite(g){
+    el('rect',{x:30,y:24,width:26,height:18,rx:3,fill:'var(--ink)'},g);
+    el('rect',{x:4,y:28,width:22,height:10,fill:'var(--muted)'},g);
+    el('rect',{x:60,y:28,width:22,height:10,fill:'var(--muted)'},g);
+    el('text',{x:16,y:64,class:'sub'},g,'Sentinel-1');
+  }
+  function drawTarget(t){
+    while(bsvg.firstChild) bsvg.removeChild(bsvg.firstChild);
+    var g=el('g',{},bsvg);
+    satellite(g);
+    var V='var(--v)', Hc='var(--h)';
+    var sx=60, sy=50;
+    if(t.id==='water'){
+      el('rect',{x:0,y:230,width:600,height:70,fill:'var(--water)'},g);
+      el('path',{d:'M0 230 Q 150 226 300 230 T 600 230',stroke:'var(--panel)','stroke-width':1.5,fill:'none',opacity:.6},g);
+      arrowLine(sx+10,sy+10,300,226,V,3,g);
+      arrowLine(300,226,540,60,V,3,g);
+      el('text',{x:430,y:120,class:'lbl'},g,'Reflected away');
+      el('text',{x:430,y:138,class:'sub'},g,'nothing returns');
+    } else if(t.id==='field'){
+      var d='M0 240';
+      for(var x=0;x<=600;x+=12){ d+=' L'+x+' '+(236+((x*7919)%11)-5); }
+      d+=' L600 300 L0 300 Z';
+      el('path',{d:d,fill:'var(--ground)'},g);
+      arrowLine(sx+10,sy+10,300,232,V,3,g);
+      [[-150,-70],[-90,-110],[120,-90],[160,-50],[40,-120]].forEach(function(v){ arrowLine(300,232,300+v[0],232+v[1],V,1.5,g); });
+      arrowLine(292,226,sx+40,sy+30,V,2.5,g);
+      el('text',{x:340,y:120,class:'lbl'},g,'Scattered in all directions');
+      el('text',{x:340,y:138,class:'sub'},g,'some comes back, still vertical');
+    } else if(t.id==='forest'){
+      el('rect',{x:0,y:262,width:600,height:38,fill:'var(--ground)'},g);
+      el('rect',{x:293,y:190,width:14,height:72,fill:'var(--trunk)'},g);
+      el('ellipse',{cx:300,cy:160,rx:110,ry:62,fill:'var(--leaf2)'},g);
+      for(var k=0;k<18;k++){ var a=k/18*Math.PI*2, rr=30+((k*41)%45); el('ellipse',{cx:300+Math.cos(a)*rr,cy:160+Math.sin(a)*rr*0.5,rx:16,ry:9,fill:'var(--leaf)'},g); }
+      arrowLine(sx+10,sy+10,250,130,V,3,g);
+      var path=[[250,130],[320,150],[270,175],[345,180],[300,140]];
+      for(var i=0;i<path.length-1;i++){ el('line',{x1:path[i][0],y1:path[i][1],x2:path[i+1][0],y2:path[i+1][1],stroke:'var(--panel)','stroke-width':2.5,'stroke-dasharray':'3 3'},g); }
+      arrowLine(300,140,sx+48,sy+22,Hc,4,g);
+      arrowLine(258,124,sx+30,sy+30,V,2.5,g);
+      el('text',{x:430,y:90,class:'lbl'},g,'Many bounces inside');
+      el('text',{x:430,y:108,class:'sub'},g,'the wave comes back twisted');
+    } else {
+      el('rect',{x:0,y:250,width:600,height:50,fill:'var(--ground)'},g);
+      el('rect',{x:360,y:110,width:110,height:140,fill:'var(--wall)'},g);
+      for(var r=0;r<3;r++) for(var c=0;c<3;c++) el('rect',{x:376+c*32,y:126+r*38,width:16,height:20,fill:'var(--sky)'},g);
+      arrowLine(sx+10,sy+10,250,248,V,3,g);
+      el('line',{x1:250,y1:248,x2:358,y2:200,stroke:V,'stroke-width':3},g);
+      arrowLine(358,200,sx+36,sy+18,V,5,g);
+      arrowLine(356,196,sx+52,sy+28,Hc,1.5,g);
+      el('text',{x:410,y:280,class:'lbl'},g,'Ground, then wall');
+      el('text',{x:410,y:296,class:'sub'},g,'thrown straight back');
+    }
+    // panel
+    document.getElementById('ttext').innerHTML='<h3>'+t.title+'</h3><p>'+t.text+'</p>';
+    function pct(db){ return Math.max(2,Math.min(100,(db+30)/35*100)); }
+    function grey(db){ var v=Math.round(Math.max(0,Math.min(1,(db+28)/30))*255); return 'rgb('+v+','+v+','+v+')'; }
+    document.getElementById('vvbar').style.width=pct(t.vv)+'%';
+    document.getElementById('vhbar').style.width=pct(t.vh)+'%';
+    document.getElementById('vvdb').textContent=t.vv+' dB';
+    document.getElementById('vhdb').textContent=t.vh+' dB';
+    document.getElementById('vvpx').style.background=grey(t.vv);
+    document.getElementById('vhpx').style.background=grey(t.vh);
+  }
+  var tBox=document.getElementById('targetBtns'), tBtns=[];
+  TARGETS.forEach(function(t,i){
+    var b=document.createElement('button'); b.textContent=t.label; b.setAttribute('aria-pressed', i===0?'true':'false');
+    b.addEventListener('click',function(){ tBtns.forEach(function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); }); drawTarget(t); });
+    tBox.appendChild(b); tBtns.push(b);
+  });
+  drawTarget(TARGETS[0]);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seeing in colors you can't: satellite bands explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EAEFF1; --panel:#FFFFFF; --ink:#16232D; --muted:#566874; --rule:#C6D0D6;
+  --veg:#2E8B57; --water:#2766B0; --soil:#A36A35; --burned:#2F2F2F; --urban:#8A63C2;
+  --focus:#1F6FE0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F161C; --panel:#17212A; --ink:#E2E9ED; --muted:#93A4AF; --rule:#2B3944;
+    --veg:#4FBF7F; --water:#5B9BE6; --soil:#D19458; --burned:#C9C9C9; --urban:#B394E6; --focus:#7FB2FF;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F161C; --panel:#17212A; --ink:#E2E9ED; --muted:#93A4AF; --rule:#2B3944;
+  --veg:#4FBF7F; --water:#5B9BE6; --soil:#D19458; --burned:#C9C9C9; --urban:#B394E6; --focus:#7FB2FF;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.55}
+main{max-width:1000px;margin:0 auto;padding:40px 20px 64px}
+h1{font-stretch:125%;font-weight:800;font-size:clamp(2rem,6vw,3.6rem);line-height:1.02;letter-spacing:-0.01em;margin:0 0 16px;max-width:14ch}
+h2{font-stretch:112%;font-weight:700;font-size:1.5rem;margin:0 0 6px}
+p{margin:0 0 12px;max-width:66ch}
+.lede{font-size:1.15rem;color:var(--muted);max-width:56ch}
+section{margin-top:48px}
+.spectrum-bar{height:10px;border-radius:5px;margin:22px 0 0;max-width:420px;
+  background:linear-gradient(90deg,#6A4BD8,#2F6FE0,#2EAA4F,#E8D23A,#E07A2E,#D93A3A 55%,#5a1a2a 70%,#3a2a20 85%,#2a2a2a)}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+button{font:inherit;cursor:pointer}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);
+  border-radius:999px;padding:6px 14px;font-size:0.92rem}
+.chip .sw{width:12px;height:12px;border-radius:50%}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip[aria-pressed="false"] .sw{background:transparent!important;border:2px solid var(--muted)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.chart-wrap{overflow-x:auto}
+svg{display:block;width:100%;min-width:640px;height:auto}
+svg text{fill:var(--ink);font-family:inherit}
+.axis{stroke:var(--muted);stroke-width:1}
+.grid{stroke:var(--rule);stroke-width:1}
+.tick{fill:var(--muted)!important;font-size:12px}
+.zone{fill:var(--muted)!important;font-size:13px;font-style:italic}
+.bandlabel{font-size:11px;font-weight:600}
+.band rect.vis{transition:opacity .15s}
+.band{cursor:pointer}
+.band:focus{outline:none}
+.band:focus-visible rect.vis{stroke:var(--focus);stroke-width:2}
+.curve{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.m-veg{stroke:var(--veg)} .m-water{stroke:var(--water)} .m-soil{stroke:var(--soil)} .m-burned{stroke:var(--burned)} .m-urban{stroke:var(--urban)}
+.d-veg{fill:var(--veg)} .d-water{fill:var(--water)} .d-soil{fill:var(--soil)} .d-burned{fill:var(--burned)} .d-urban{fill:var(--urban)}
+.info{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;margin-top:14px;align-items:baseline}
+.info .big{grid-row:span 3;font-stretch:125%;font-weight:800;font-size:3rem;line-height:1}
+.info .meta{color:var(--muted);font-size:.95rem}
+.info p{margin:0}
+.mixer{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:22px;align-items:start}
+@media (max-width:760px){.mixer{grid-template-columns:1fr}}
+.scene{position:relative}
+canvas{display:block;width:100%;aspect-ratio:60/36;image-rendering:pixelated;border-radius:10px;border:1px solid var(--rule);background:#000}
+.tip{position:absolute;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:8px;
+  padding:6px 10px;font-size:.85rem;white-space:nowrap;transform:translate(-50%,-120%);display:none}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.preset{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:.92rem}
+.preset[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.channels{display:grid;gap:10px;margin-bottom:14px}
+.channel{display:flex;align-items:center;gap:10px}
+.channel .dot{width:22px;height:22px;border-radius:6px;flex:none}
+.channel label{width:46px;font-weight:600}
+select{font:inherit;flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--rule);background:var(--panel);color:var(--ink)}
+.toggle{display:flex;align-items:center;gap:10px;margin:6px 0}
+.toggle input{width:18px;height:18px;accent-color:var(--ink)}
+.explain{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+.explain strong{display:block;font-stretch:112%;margin-bottom:4px}
+.key{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.88rem;color:var(--muted)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.takeaways{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:14px}
+.takeaways .card p{margin:0}
+.takeaways h3{margin:0 0 6px;font-size:1.05rem;font-stretch:112%}
+footer{margin-top:48px;color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Seeing in colors you can't</h1>
+    <p class="lede">Every surface reflects light in its own pattern, like a fingerprint. Satellites measure that pattern in slices called bands. Choose the right slices and hidden things appear: burn scars under smoke, stressed crops, flooded fields.</p>
+    <div class="spectrum-bar" aria-hidden="true"></div>
+  </header>
+
+  <section aria-labelledby="s1">
+    <h2 id="s1">Light fingerprints</h2>
+    <p>Each line shows how much light a surface reflects at each wavelength. The columns are the 13 bands of Sentinel-2, the free satellite you can use in Copernicus Browser. Our eyes only see the narrow rainbow on the left. Click any column to learn what it's good for.</p>
+    <div class="chips" id="chips" role="group" aria-label="Show or hide surfaces"></div>
+    <div class="card">
+      <div class="chart-wrap"><svg id="chart" viewBox="0 0 900 400" role="img" aria-label="Reflectance of vegetation, water, bare soil, burned land and buildings across Sentinel-2 bands"></svg></div>
+      <div class="info" id="info" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s2">
+    <h2 id="s2">Mix your own image</h2>
+    <p>A screen has only three colors: red, green and blue. A satellite image is made by choosing which band goes into each one. Below is a simulated landscape with fields, a river, a town and a fresh burn scar under drifting smoke. Try the presets, then make your own.</p>
+    <div class="mixer">
+      <div class="scene">
+        <canvas id="scene" width="60" height="36" aria-label="Simulated satellite image"></canvas>
+        <div class="tip" id="tip"></div>
+        <div class="key" id="key" aria-hidden="true"></div>
+      </div>
+      <div>
+        <div class="presets" id="presets" role="group" aria-label="Band combinations"></div>
+        <div class="channels" id="channels"></div>
+        <div class="toggle"><input type="checkbox" id="smoke" checked><label for="smoke">Smoke over the fire</label></div>
+        <div class="toggle"><input type="checkbox" id="truth"><label for="truth">Show what's really on the ground</label></div>
+        <div class="explain" id="explain" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s3">
+    <h2 id="s3">What to remember</h2>
+    <div class="takeaways">
+      <div class="card"><h3>Bands are ingredients</h3><p>Each band is one measurement of reflected light. Indices like NDVI or NBR are recipes that combine bands to highlight one thing.</p></div>
+      <div class="card"><h3>False color is honest</h3><p>Infrared is invisible, so we paint it with visible colors. Always tell readers which bands an image uses.</p></div>
+      <div class="card"><h3>Longer waves see further</h3><p>Shortwave infrared passes through smoke and haze that block visible light. That's why burn scars appear in SWIR.</p></div>
+    </div>
+  </section>
+
+  <footer>Reflectance values are simplified for teaching and based on typical spectral signatures. Sentinel-2 band data from ESA.</footer>
+</main>
+
+<script>
+(function(){
+  // ---------- Data ----------
+  var BANDS = [
+    {id:'B1', nm:443, w:20, res:60, name:'Coastal aerosol', color:'#6A4BD8', use:'Measures haze and fine particles in the air, and shallow coastal water. Mostly used to correct images rather than to look at.'},
+    {id:'B2', nm:490, w:65, res:10, name:'Blue', color:'#2F6FE0', use:'The blue of true-color images. Penetrates clear water, so it helps map shallow water and coastlines.'},
+    {id:'B3', nm:560, w:35, res:10, name:'Green', color:'#2EAA4F', use:'The green of true-color images. Plants reflect a little green, which is why leaves look green to us.'},
+    {id:'B4', nm:665, w:30, res:10, name:'Red', color:'#D93A3A', use:'Plants absorb red light for photosynthesis, so healthy vegetation is dark here. Half of the NDVI recipe.'},
+    {id:'B5', nm:705, w:15, res:20, name:'Red edge 1', color:'#A8323F', use:'Where plant reflectance shoots upward. Shifts here reveal crop stress before it is visible to the eye.'},
+    {id:'B6', nm:740, w:15, res:20, name:'Red edge 2', color:'#962E45', use:'Another slice of the red edge, useful for estimating leaf health and crop condition.'},
+    {id:'B7', nm:783, w:20, res:20, name:'Red edge 3', color:'#842A4A', use:'Upper red edge, closely tracks the amount of healthy leaf material.'},
+    {id:'B8', nm:842, w:115, res:10, name:'Near-infrared', color:'#70244C', use:'Healthy plants shine brightly here and water is almost black. The workhorse for vegetation, floods and burn mapping.'},
+    {id:'B8A', nm:865, w:20, res:20, name:'Narrow NIR', color:'#5E2149', use:'A cleaner, narrower near-infrared slice, often paired with SWIR for burn and moisture indices.'},
+    {id:'B9', nm:945, w:20, res:60, name:'Water vapour', color:'#4D1F43', use:'Measures water vapour in the atmosphere. Used to correct images, not to see the ground.'},
+    {id:'B10', nm:1375, w:30, res:60, name:'Cirrus', color:'#5A4A3A', use:'The atmosphere absorbs almost all light here, so only high, thin cirrus clouds show up. Used to flag clouds.'},
+    {id:'B11', nm:1610, w:90, res:20, name:'Shortwave infrared 1', color:'#6E4E2E', use:'Sensitive to moisture in soil and plants. Separates bare ground from buildings, and sees through thin smoke.'},
+    {id:'B12', nm:2190, w:180, res:20, name:'Shortwave infrared 2', color:'#7E5524', use:'Burn scars and active fires glow here, and different minerals and rocks stand apart. Key for fire investigations.'}
+  ];
+  // Reflectance in %, simplified typical signatures
+  var REFL = {
+    veg:    {B1:3,B2:4,B3:9,B4:4,B5:12,B6:35,B7:45,B8:48,B8A:48,B9:44,B10:2,B11:24,B12:11},
+    water:  {B1:8,B2:7,B3:6,B4:3,B5:2,B6:1.5,B7:1,B8:1,B8A:0.8,B9:0.5,B10:0.2,B11:0.2,B12:0.1},
+    soil:   {B1:10,B2:12,B3:15,B4:19,B5:21,B6:22,B7:24,B8:25,B8A:26,B9:27,B10:3,B11:33,B12:27},
+    burned: {B1:4,B2:4,B3:5,B4:6,B5:7,B6:8,B7:9,B8:10,B8A:10,B9:11,B10:2,B11:20,B12:20},
+    urban:  {B1:12,B2:13,B3:15,B4:17,B5:18,B6:19,B7:20,B8:21,B8A:21,B9:21,B10:3,B11:26,B12:24}
+  };
+  var MATS = [
+    {k:'veg', name:'Healthy vegetation'},
+    {k:'water', name:'Water'},
+    {k:'soil', name:'Bare soil'},
+    {k:'burned', name:'Burned land'},
+    {k:'urban', name:'Buildings'}
+  ];
+  var bandById = {}; BANDS.forEach(function(b){ bandById[b.id]=b; });
+
+  function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+  // ---------- Chart ----------
+  var svg = document.getElementById('chart');
+  var NS = 'http://www.w3.org/2000/svg';
+  var TOP=46, BOT=330, YMAX=60;
+  function X(nm){ return nm<=1000 ? 70 + (nm-400)*(500/600) : 570 + (nm-1000)*(316/1300); }
+  function Y(r){ return BOT - r*((BOT-TOP)/YMAX); }
+  function el(tag, attrs, parent, text){
+    var e=document.createElementNS(NS,tag);
+    for(var a in attrs) e.setAttribute(a, attrs[a]);
+    if(text!==undefined) e.textContent=text;
+    (parent||svg).appendChild(e); return e;
+  }
+  var defs = el('defs',{});
+  var grad = el('linearGradient',{id:'rainbow',x1:'0',x2:'1',y1:'0',y2:'0'},defs);
+  [['0','#6A4BD8'],['.25','#2F6FE0'],['.5','#2EAA4F'],['.7','#E8D23A'],['.85','#E07A2E'],['1','#D93A3A']].forEach(function(s){
+    el('stop',{offset:s[0],'stop-color':s[1]},grad);
+  });
+  // grid + y axis
+  for(var r=0;r<=YMAX;r+=10){
+    el('line',{x1:70,x2:886,y1:Y(r),y2:Y(r),class:'grid'});
+    el('text',{x:62,y:Y(r)+4,'text-anchor':'end',class:'tick'},null,r+'%');
+  }
+  el('text',{x:16,y:(TOP+BOT)/2,'text-anchor':'middle',class:'tick',transform:'rotate(-90 16 '+((TOP+BOT)/2)+')'},null,'Light reflected');
+  // bands
+  var selected = 'B8';
+  var bandGroups = {};
+  BANDS.forEach(function(b,i){
+    var x1=X(b.nm-b.w/2), x2=X(b.nm+b.w/2), w=Math.max(7,x2-x1), cx=X(b.nm);
+    var g=el('g',{class:'band',tabindex:'0',role:'button','aria-label':b.id+' '+b.name+', '+b.nm+' nanometres'});
+    el('rect',{x:cx-Math.max(8,w/2),y:TOP-30,width:Math.max(16,w),height:BOT-TOP+30,fill:'transparent'},g);
+    el('rect',{x:cx-w/2,y:TOP,width:w,height:BOT-TOP,fill:b.color,class:'vis',opacity:.16},g);
+    el('text',{x:cx,y:(i%2? TOP-20: TOP-6),'text-anchor':'middle',class:'bandlabel'},g,b.id);
+    g.addEventListener('click',function(){ selectBand(b.id); });
+    g.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectBand(b.id);} });
+    bandGroups[b.id]=g;
+  });
+  // x axis
+  el('line',{x1:70,x2:886,y1:BOT,y2:BOT,class:'axis'});
+  el('rect',{x:X(400),y:BOT+4,width:X(700)-X(400),height:6,rx:3,fill:'url(#rainbow)'});
+  [400,500,600,700,800,900,1000,1500,2000].forEach(function(t){
+    el('line',{x1:X(t),x2:X(t),y1:BOT,y2:BOT+4,class:'axis'});
+    el('text',{x:X(t),y:BOT+26,'text-anchor':'middle',class:'tick'},null,t);
+  });
+  el('text',{x:886,y:BOT+26,'text-anchor':'end',class:'tick'},null,'nm');
+  // axis break marks
+  var bx=X(1000)+8;
+  el('path',{d:'M'+(bx-4)+' '+(BOT+5)+' l6 -10 M'+(bx+1)+' '+(BOT+5)+' l6 -10',class:'axis',fill:'none'});
+  el('text',{x:(X(400)+X(700))/2,y:BOT+50,'text-anchor':'middle',class:'zone'},null,'Visible');
+  el('text',{x:(X(700)+X(1000))/2+20,y:BOT+50,'text-anchor':'middle',class:'zone'},null,'Near-infrared');
+  el('text',{x:(X(1300)+X(2300))/2,y:BOT+50,'text-anchor':'middle',class:'zone'},null,'Shortwave infrared');
+  el('text',{x:886,y:BOT+66,'text-anchor':'end',class:'zone'},null,'Scale compressed after 1000 nm');
+  // curves
+  var curveBands = BANDS.filter(function(b){ return b.id!=='B10'; });
+  var curveEls = {};
+  MATS.forEach(function(m){
+    var g=el('g',{});
+    var pts=curveBands.map(function(b){ return X(b.nm)+','+Y(REFL[m.k][b.id]); }).join(' ');
+    el('polyline',{points:pts,class:'curve m-'+m.k},g);
+    curveBands.forEach(function(b){ el('circle',{cx:X(b.nm),cy:Y(REFL[m.k][b.id]),r:3.2,class:'d-'+m.k},g); });
+    curveEls[m.k]=g;
+  });
+
+  // chips
+  var chips=document.getElementById('chips');
+  MATS.forEach(function(m){
+    var c=document.createElement('button');
+    c.className='chip'; c.setAttribute('aria-pressed','true');
+    c.innerHTML='<span class="sw" style="background:var(--'+m.k+')"></span>'+m.name;
+    c.addEventListener('click',function(){
+      var on=c.getAttribute('aria-pressed')!=='true';
+      c.setAttribute('aria-pressed',on?'true':'false');
+      curveEls[m.k].style.display=on?'':'none';
+    });
+    chips.appendChild(c);
+  });
+
+  var info=document.getElementById('info');
+  function selectBand(id){
+    selected=id;
+    BANDS.forEach(function(b){
+      bandGroups[b.id].querySelector('rect.vis').setAttribute('opacity', b.id===id? .5 : .16);
+    });
+    var b=bandById[id];
+    var visible = b.nm<=700 ? 'Visible to the human eye' : 'Invisible to the human eye';
+    info.innerHTML='<div class="big" style="color:'+b.color+'">'+b.id+'</div>'+
+      '<p><strong>'+b.name+'</strong></p>'+
+      '<p class="meta">'+b.nm+' nm, '+b.res+' m pixels. '+visible+'.</p>'+
+      '<p>'+b.use+'</p>';
+  }
+  selectBand('B8');
+
+  // ---------- Scene ----------
+  var W=60,H=36;
+  function rng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  function hash(a,b){ var r=rng(a*7919+b*104729+13); return r(); }
+  var R=rng(42);
+  var mat=[], noise=[], smokeM=[];
+  var fx=15, fy=26;
+  for(var y=0;y<H;y++){ for(var x=0;x<W;x++){
+    var m;
+    var bxk=Math.floor(x/6), byk=Math.floor(y/5);
+    m = hash(bxk,byk)<0.62 ? 'veg':'soil';
+    if(x>=40&&x<=53&&y>=3&&y<=13){ m='urban'; if(hash(x,y+500)<0.14) m='veg'; }
+    var yc=19+4*Math.sin(x/8)+1.5*Math.sin(x/3.3);
+    var isWater = Math.abs(y-yc)<1.6;
+    var dx=x-fx, dy=y-fy, ang=Math.atan2(dy,dx);
+    var rr=Math.sqrt(dx*dx/1.8+dy*dy);
+    var edge=6.2+1.3*Math.sin(ang*3)+0.8*Math.sin(ang*5+1);
+    if(rr<edge && !isWater) m='burned';
+    if(isWater) m='water';
+    mat.push(m);
+    noise.push(0.86+R()*0.28);
+    // smoke plume drifting up and to the right
+    var dirx=0.86, diry=-0.51;
+    var t=dx*dirx+dy*diry, perp=Math.abs(dx*diry-dy*dirx);
+    var spread=2.2+0.18*Math.max(t,0);
+    var s=(t<0? Math.exp(-t*t/6):1)*Math.exp(-perp*perp/(2*spread*spread))*Math.exp(-Math.max(t,0)/38);
+    smokeM.push(s);
+  }}
+  // per-band stretch
+  var STRETCH={};
+  BANDS.forEach(function(b){ var mx=0; MATS.forEach(function(m){ mx=Math.max(mx,REFL[m.k][b.id]); }); STRETCH[b.id]=Math.max(mx*1.3,1); });
+  function value(i,bid,smokeOn){
+    var v=REFL[mat[i]][bid]*noise[i];
+    if(smokeOn) v+=38*smokeM[i]*Math.pow(490/bandById[bid].nm,2);
+    return v;
+  }
+  function ramp(stops,v){
+    if(v<=stops[0][0]) return hex(stops[0][1]);
+    for(var i=1;i<stops.length;i++){
+      if(v<=stops[i][0]){
+        var a=stops[i-1],b=stops[i],t=(v-a[0])/(b[0]-a[0]);
+        var ca=hex(a[1]),cb=hex(b[1]);
+        return [ca[0]+(cb[0]-ca[0])*t, ca[1]+(cb[1]-ca[1])*t, ca[2]+(cb[2]-ca[2])*t];
+      }
+    }
+    return hex(stops[stops.length-1][1]);
+  }
+  function hex(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)]; }
+  var NDVI_STOPS=[[-0.5,'#2766B0'],[0,'#C9B48A'],[0.25,'#E5D36A'],[0.5,'#86B84E'],[0.85,'#1F6E3A']];
+  var NBR_STOPS=[[-0.4,'#6E1410'],[-0.15,'#C9532E'],[0.05,'#E8C77E'],[0.35,'#7FB069'],[0.7,'#2D6A3E']];
+
+  var PRESETS=[
+    {id:'true', label:'True color', rgb:['B4','B3','B2'], title:'True color (B4, B3, B2)',
+      text:'What your eyes would see from space. The burn scar is hard to separate from dark fields, and the smoke hides part of it.'},
+    {id:'cir', label:'Color infrared', rgb:['B8','B4','B3'], title:'Color infrared (B8, B4, B3)',
+      text:'Near-infrared goes into the red channel, so healthy plants glow red. Burned land, the town and water stay dark or grey. Smoke still blocks part of the view.'},
+    {id:'swir', label:'Burn scars', rgb:['B12','B8A','B4'], title:'Shortwave infrared (B12, B8A, B4)',
+      text:'Burned land turns red-brown, plants are green and water is black. Shortwave infrared passes through the smoke, so the full scar appears.'},
+    {id:'agri', label:'Agriculture', rgb:['B11','B8','B2'], title:'Agriculture (B11, B8, B2)',
+      text:'Separates healthy crops (bright green) from bare fields and buildings. Useful for tracking farming, drought or abandoned land.'},
+    {id:'ndvi', label:'NDVI', index:'ndvi', title:'NDVI: (B8 minus B4) divided by (B8 plus B4)',
+      text:'A recipe, not a band. Green means healthy vegetation, yellow and beige mean bare or burned ground, blue is water.'},
+    {id:'nbr', label:'NBR', index:'nbr', title:'NBR: (B8 minus B12) divided by (B8 plus B12)',
+      text:'The Normalized Burn Ratio. Dark red marks burned land, green marks healthy vegetation. Water is masked in navy. Compare before and after a fire to measure burn severity.'}
+  ];
+  var state={preset:'true', rgb:['B4','B3','B2'], index:null};
+  var canvas=document.getElementById('scene'), ctx=canvas.getContext('2d');
+  var img=ctx.createImageData(W,H);
+  var smokeBox=document.getElementById('smoke'), truthBox=document.getElementById('truth');
+
+  function render(){
+    var smokeOn=smokeBox.checked, truth=truthBox.checked;
+    var truthColors={veg:hex(cssVar('--veg')||'#2E8B57'),water:hex(cssVar('--water')||'#2766B0'),soil:hex(cssVar('--soil')||'#A36A35'),
+      burned:hex('#2F2F2F'),urban:hex(cssVar('--urban')||'#8A63C2')};
+    truthColors.burned=[60,30,25];
+    for(var i=0;i<W*H;i++){
+      var c;
+      if(truth){ c=truthColors[mat[i]]; }
+      else if(state.index==='ndvi'){
+        var n8=value(i,'B8',smokeOn), n4=value(i,'B4',smokeOn);
+        c=ramp(NDVI_STOPS,(n8-n4)/(n8+n4));
+      } else if(state.index==='nbr'){
+        if(mat[i]==='water'){ c=[36,67,95]; }
+        else { var b8=value(i,'B8',smokeOn), b12=value(i,'B12',smokeOn); c=ramp(NBR_STOPS,(b8-b12)/(b8+b12)); }
+      } else {
+        c=state.rgb.map(function(bid){ var v=value(i,bid,smokeOn)/STRETCH[bid]; v=Math.min(1,Math.max(0,v)); return Math.pow(v,0.85)*255; });
+      }
+      img.data[i*4]=c[0]; img.data[i*4+1]=c[1]; img.data[i*4+2]=c[2]; img.data[i*4+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+    renderKey();
+  }
+
+  function renderKey(){
+    var key=document.getElementById('key');
+    if(truthBox.checked){
+      key.innerHTML=MATS.map(function(m){ var col=m.k==='burned'?'#3C1E19':'var(--'+m.k+')'; return '<span><i style="background:'+col+'"></i>'+m.name+'</span>'; }).join('');
+    } else if(state.index){
+      var st=state.index==='ndvi'?NDVI_STOPS:NBR_STOPS;
+      var lo=state.index==='ndvi'?'Water':'Burned', hi='Healthy plants';
+      key.innerHTML='<span>'+lo+'</span><span style="flex:1;min-width:120px"><i style="width:100%;height:10px;background:linear-gradient(90deg,'+st.map(function(s){return s[1];}).join(',')+')"></i></span><span>'+hi+'</span>';
+    } else {
+      key.innerHTML='<span><i style="background:#D93A3A"></i>Red: '+state.rgb[0]+'</span><span><i style="background:#2EAA4F"></i>Green: '+state.rgb[1]+'</span><span><i style="background:#2F6FE0"></i>Blue: '+state.rgb[2]+'</span><span>Hover the image to read pixels</span>';
+    }
+  }
+
+  // presets
+  var presetBox=document.getElementById('presets');
+  var presetBtns={};
+  PRESETS.forEach(function(p){
+    var b=document.createElement('button');
+    b.className='preset'; b.textContent=p.label; b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',function(){ applyPreset(p.id); });
+    presetBox.appendChild(b); presetBtns[p.id]=b;
+  });
+  // channel selects
+  var chBox=document.getElementById('channels');
+  var selects=[];
+  [['Red','#D93A3A'],['Green','#2EAA4F'],['Blue','#2F6FE0']].forEach(function(ch,ci){
+    var row=document.createElement('div'); row.className='channel';
+    var id='ch'+ci;
+    row.innerHTML='<span class="dot" style="background:'+ch[1]+'"></span><label for="'+id+'">'+ch[0]+'</label>';
+    var s=document.createElement('select'); s.id=id;
+    BANDS.forEach(function(b){
+      if(b.id==='B10'||b.id==='B9'||b.id==='B1') return;
+      var o=document.createElement('option'); o.value=b.id; o.textContent=b.id+'  '+b.name+' ('+b.nm+' nm)'; s.appendChild(o);
+    });
+    s.addEventListener('change',function(){
+      state.rgb[ci]=s.value; state.index=null; state.preset=null;
+      var match=PRESETS.filter(function(p){ return p.rgb && p.rgb.join()===state.rgb.join(); })[0];
+      if(match){ applyPreset(match.id); return; }
+      Object.keys(presetBtns).forEach(function(k){ presetBtns[k].setAttribute('aria-pressed','false'); });
+      setChannelsEnabled(true);
+      document.getElementById('explain').innerHTML='<strong>Your combination ('+state.rgb.join(', ')+')</strong><p>Each surface looks different because it reflects these three bands in different amounts. Check the fingerprint chart above to predict what will stand out.</p>';
+      render();
+    });
+    row.appendChild(s); chBox.appendChild(row); selects.push(s);
+  });
+  function setChannelsEnabled(on){ selects.forEach(function(s){ s.disabled=!on; }); chBox.style.opacity=on?1:.45; }
+  function applyPreset(id){
+    var p=PRESETS.filter(function(q){return q.id===id;})[0];
+    state.preset=id;
+    Object.keys(presetBtns).forEach(function(k){ presetBtns[k].setAttribute('aria-pressed', k===id?'true':'false'); });
+    if(p.index){ state.index=p.index; setChannelsEnabled(false); }
+    else { state.index=null; state.rgb=p.rgb.slice(); selects.forEach(function(s,i){ s.value=state.rgb[i]; }); setChannelsEnabled(true); }
+    document.getElementById('explain').innerHTML='<strong>'+p.title+'</strong><p>'+p.text+'</p>';
+    render();
+  }
+  smokeBox.addEventListener('change',render);
+  truthBox.addEventListener('change',render);
+
+  // hover readout
+  var tip=document.getElementById('tip');
+  var names={}; MATS.forEach(function(m){ names[m.k]=m.name; });
+  function readout(e){
+    var rect=canvas.getBoundingClientRect();
+    var cx=(e.touches?e.touches[0].clientX:e.clientX)-rect.left, cy=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+    var x=Math.floor(cx/rect.width*W), y=Math.floor(cy/rect.height*H);
+    if(x<0||y<0||x>=W||y>=H){ tip.style.display='none'; return; }
+    var i=y*W+x, smokeOn=smokeBox.checked, txt=names[mat[i]];
+    if(state.index==='ndvi'){ var a=value(i,'B8',smokeOn),b=value(i,'B4',smokeOn); txt+=', NDVI '+((a-b)/(a+b)).toFixed(2); }
+    else if(state.index==='nbr'){ var c=value(i,'B8',smokeOn),d=value(i,'B12',smokeOn); txt+=', NBR '+((c-d)/(c+d)).toFixed(2); }
+    else { txt+=', '+state.rgb.map(function(bid){ return bid+' '+value(i,bid,smokeOn).toFixed(0)+'%'; }).join(', '); }
+    if(smokeOn && smokeM[i]>0.25) txt+=' (under smoke)';
+    tip.textContent=txt; tip.style.display='block';
+    tip.style.left=cx+'px'; tip.style.top=cy+'px';
+  }
+  canvas.addEventListener('mousemove',readout);
+  canvas.addEventListener('touchstart',readout,{passive:true});
+  canvas.addEventListener('touchmove',readout,{passive:true});
+  canvas.addEventListener('mouseleave',function(){ tip.style.display='none'; });
+
+  applyPreset('true');
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+})();
+</script>
+</body>
+</html>

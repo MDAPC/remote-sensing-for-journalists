@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>One recipe, many indices: NDVI, NDWI, NDMI, NBR, NDBI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EAEFF1; --panel:#FFFFFF; --ink:#16232D; --muted:#566874; --rule:#C6D0D6; --focus:#1F6FE0;
+  --red:#D93A3A; --green:#2EAA4F; --nir:#8A2A55; --swir1:#8A5A2A; --swir2:#6E4520;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F161C; --panel:#17212A; --ink:#E2E9ED; --muted:#93A4AF; --rule:#2B3944; --focus:#7FB2FF;
+    --red:#FF6B6B; --green:#5BD07E; --nir:#D86A9C; --swir1:#D9A066; --swir2:#C08850;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F161C; --panel:#17212A; --ink:#E2E9ED; --muted:#93A4AF; --rule:#2B3944; --focus:#7FB2FF;
+  --red:#FF6B6B; --green:#5BD07E; --nir:#D86A9C; --swir1:#D9A066; --swir2:#C08850;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.55}
+main{max-width:1000px;margin:0 auto;padding:40px 20px 64px}
+h1{font-stretch:125%;font-weight:800;font-size:clamp(2rem,6vw,3.6rem);line-height:1.02;letter-spacing:-0.01em;margin:0 0 16px;max-width:14ch}
+h2{font-stretch:112%;font-weight:700;font-size:1.5rem;margin:0 0 6px}
+h3{font-stretch:112%;font-size:1.1rem;margin:0 0 6px}
+p{margin:0 0 12px;max-width:66ch}
+.lede{font-size:1.15rem;color:var(--muted);max-width:58ch}
+section{margin-top:48px}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:18px}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.recipe{font-stretch:125%;font-weight:800;font-size:clamp(1.3rem,4vw,2.2rem);display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:18px 0 6px}
+.frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15}
+.frac .num{padding:0 10px 6px;border-bottom:4px solid var(--ink)}
+.frac .den{padding:6px 10px 0}
+.b{display:inline-block;padding:0 8px;border-radius:8px;color:#fff}
+.demo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:center}
+@media (max-width:700px){.demo{grid-template-columns:1fr}}
+.bars{display:flex;align-items:flex-end;gap:22px;height:200px;padding:0 10px;border-bottom:2px solid var(--rule)}
+.bar{width:64px;border-radius:8px 8px 0 0;position:relative;transition:height .2s}
+.bar span{position:absolute;top:-24px;left:0;right:0;text-align:center;font-weight:700;font-size:.95rem;color:var(--ink)}
+.barlbl{display:flex;gap:22px;padding:6px 10px 0}
+.barlbl div{width:64px;text-align:center;font-size:.9rem;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--ink)}
+.result{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:baseline;margin-top:12px}
+.result .v{font-stretch:125%;font-weight:800;font-size:1.8rem;text-align:right}
+.result .bad{color:var(--red)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.tabs button{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 14px;text-align:left;line-height:1.2}
+.tabs button small{display:block;color:var(--muted);font-size:.8rem}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tabs button[aria-pressed="true"] small{color:var(--paper);opacity:.75}
+.idx{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.idx{grid-template-columns:1fr}}
+.science{border-left:4px solid var(--ink);padding-left:14px;margin:14px 0}
+.surf{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.surf button{border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:5px 12px;font-size:.9rem}
+.surf button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.calc{font-size:1.05rem;margin:10px 0;font-variant-numeric:tabular-nums}
+.calc .eq{font-stretch:125%;font-weight:800;font-size:1.6rem}
+.gauge{position:relative;height:22px;border-radius:11px;margin:30px 0 6px}
+.gauge .mk{position:absolute;top:-10px;width:4px;height:42px;background:var(--ink);border-radius:2px;transform:translateX(-50%);transition:left .3s}
+.gauge .mk::after{content:attr(data-v);position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-weight:800;font-size:.95rem;white-space:nowrap;color:var(--ink)}
+.gscale{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.zones{margin:12px 0 0;padding:0;list-style:none;font-size:.92rem}
+.zones li{display:flex;gap:10px;align-items:baseline;margin:3px 0}
+.zones i{width:12px;height:12px;border-radius:3px;flex:none;transform:translateY(1px)}
+.mapwrap{position:relative}
+canvas{display:block;width:100%;aspect-ratio:60/36;image-rendering:pixelated;border-radius:10px;border:1px solid var(--rule)}
+.tip{position:absolute;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:6px 10px;font-size:.85rem;white-space:nowrap;transform:translate(-50%,-120%);display:none}
+.note{font-size:.9rem;color:var(--muted);margin-top:8px}
+.use{margin-top:14px;padding-top:12px;border-top:1px solid var(--rule)}
+.takeaways{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:14px}
+.takeaways .card p{margin:0}
+footer{margin-top:48px;color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>One recipe, many indices</h1>
+    <p class="lede">The most famous satellite indices all use the same simple recipe. Take two bands where a surface behaves very differently, subtract one from the other, and divide by their sum. The answer always lands between −1 and +1.</p>
+    <div class="recipe" aria-label="Index equals band A minus band B, divided by band A plus band B">
+      <span>Index =</span>
+      <span class="frac"><span class="num">A − B</span><span class="den">A + B</span></span>
+    </div>
+  </header>
+
+  <section aria-labelledby="why">
+    <h2 id="why">Why divide? Because sunlight changes</h2>
+    <p>The same field looks brighter in full sun and darker in the shadow of a cloud or a hill. A simple difference changes with the light. Dividing by the sum cancels the brightness out, so the index measures the surface, not the weather. Move the slider.</p>
+    <div class="card demo">
+      <div>
+        <div class="bars" aria-hidden="true">
+          <div class="bar" id="barN" style="background:var(--nir)"><span id="vN"></span></div>
+          <div class="bar" id="barR" style="background:var(--red)"><span id="vR"></span></div>
+        </div>
+        <div class="barlbl" aria-hidden="true"><div>NIR</div><div>Red</div></div>
+        <label for="sun" style="display:block;margin-top:16px;font-weight:600">Sunlight on a healthy field: <span id="sunv"></span></label>
+        <input type="range" id="sun" min="20" max="100" value="100">
+      </div>
+      <div>
+        <div class="result">
+          <div class="v bad" id="diff"></div><div><strong>Simple difference</strong><br><span class="note" style="margin:0">NIR − Red. Changes with the light, so a shaded field looks "less healthy".</span></div>
+          <div class="v" id="norm"></div><div><strong>Normalized difference</strong><br><span class="note" style="margin:0">(NIR − Red) ÷ (NIR + Red). Stays the same. This is NDVI.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="five">
+    <h2 id="five">Five famous indices</h2>
+    <p>Each index picks the two bands where its target behaves most differently from everything else. Choose an index, then click a surface to run the calculation.</p>
+    <div class="tabs" id="tabs" role="group" aria-label="Index"></div>
+    <div class="card">
+      <div class="idx">
+        <div>
+          <h3 id="iname"></h3>
+          <div class="recipe" id="iformula" style="font-size:1.4rem;margin:8px 0"></div>
+          <div class="science" id="iscience"></div>
+          <div class="surf" id="surf" role="group" aria-label="Surface"></div>
+          <div class="calc" id="calc" aria-live="polite"></div>
+          <div class="gauge" id="gauge"><div class="mk" id="mk"></div></div>
+          <div class="gscale"><span>−1</span><span>0</span><span>+1</span></div>
+          <ul class="zones" id="zones"></ul>
+        </div>
+        <div>
+          <div class="mapwrap"><canvas id="map" width="60" height="36" aria-label="Simulated landscape colored by the selected index"></canvas><div class="tip" id="tip"></div></div>
+          <p class="note">A simulated landscape: fields, a river, a town and a fresh burn scar. Hover or tap to read values.</p>
+          <div class="use" id="use"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="care">
+    <h2 id="care">Read indices with care</h2>
+    <div class="takeaways">
+      <div class="card"><h3>Compare, don't just measure</h3><p>A single value means little. The story is in the change: before and after a fire, this season versus last year.</p></div>
+      <div class="card"><h3>Thresholds are rough</h3><p>"Above 0.5 is healthy" is a guide, not a rule. Crops, climate and season all shift the numbers.</p></div>
+      <div class="card"><h3>Every index has blind spots</h3><p>Water confuses burn and moisture indices, and bare soil looks like buildings in NDBI. Mask what you don't want and check with true color.</p></div>
+      <div class="card"><h3>Clouds and smoke lie</h3><p>Optical indices fail under clouds and thick smoke. Use cloud-free dates, or switch to radar.</p></div>
+    </div>
+  </section>
+  <footer>Reflectance values are simplified typical signatures for teaching. Sentinel-2 band numbers shown next to each formula.</footer>
+</main>
+
+<script>
+(function(){
+  // ---------- shared data ----------
+  var REFL = {
+    veg:    {B3:9, B4:4, B8:48, B11:24, B12:11},
+    water:  {B3:6, B4:3, B8:1,  B11:0.2, B12:0.1},
+    soil:   {B3:15,B4:19,B8:25, B11:33, B12:27},
+    burned: {B3:5, B4:6, B8:10, B11:20, B12:20},
+    urban:  {B3:15,B4:17,B8:21, B11:26, B12:24}
+  };
+  var MATS=[{k:'veg',name:'Healthy plants'},{k:'water',name:'Water'},{k:'soil',name:'Bare soil'},{k:'burned',name:'Burned land'},{k:'urban',name:'Buildings'}];
+  var BNAME={B3:'Green',B4:'Red',B8:'NIR',B11:'SWIR 1',B12:'SWIR 2'};
+  var BCOL={B3:'var(--green)',B4:'var(--red)',B8:'var(--nir)',B11:'var(--swir1)',B12:'var(--swir2)'};
+
+  var INDICES=[
+    {id:'ndvi', name:'NDVI', full:'Normalized Difference Vegetation Index', a:'B8', b:'B4', short:'plants',
+      science:'Chlorophyll in leaves <strong>absorbs red light</strong> to power photosynthesis, while the spongy cells inside leaves <strong>bounce near-infrared back</strong>. Healthy plants: high NIR, low red. Nothing else on Earth does that so strongly.',
+      stops:[[-1,'#2766B0'],[-0.05,'#9CC3E4'],[0,'#D9C9A3'],[0.2,'#E6D76A'],[0.5,'#8CBF4F'],[1,'#1E6B38']],
+      zones:[['#2766B0','Below 0: water, clouds, snow'],['#D9C9A3','0 to 0.2: bare soil, rock, buildings'],['#E6D76A','0.2 to 0.5: sparse or stressed vegetation'],['#1E6B38','Above 0.5: dense, healthy vegetation']],
+      use:'Crop failure and drought, deforestation, farmland abandoned by displacement, green spaces lost to construction.'},
+    {id:'ndwi', name:'NDWI', full:'Normalized Difference Water Index', a:'B3', b:'B8', short:'water',
+      science:'Water <strong>reflects a little green</strong> but <strong>swallows near-infrared</strong> almost completely. Land and plants do the opposite. So water is the only surface with green higher than NIR.',
+      stops:[[-1,'#8C6D46'],[-0.3,'#C8B48A'],[0,'#E9E4D4'],[0.3,'#7FB2E5'],[1,'#1F4E8C']],
+      zones:[['#8C6D46','Below 0: land and vegetation'],['#E9E4D4','Around 0: wet soil, mixed pixels'],['#1F4E8C','Above 0: open water']],
+      use:'Flood extent, shrinking lakes and rivers, dam reservoirs filling or emptying.'},
+    {id:'ndmi', name:'NDMI', full:'Normalized Difference Moisture Index', a:'B8', b:'B11', short:'moisture',
+      science:'Water <strong>inside leaves absorbs shortwave infrared</strong>. A well-watered plant reflects little SWIR; a thirsty one reflects more. NIR stays high while the leaf structure is intact, so the gap shows how much water plants hold.',
+      stops:[[-1,'#7A3410'],[-0.1,'#E0B070'],[0.1,'#D9E0B0'],[0.3,'#5FA8A0'],[1,'#1F5F8B']],
+      zones:[['#7A3410','Below 0: dry vegetation or bare ground'],['#D9E0B0','0 to 0.2: moderate moisture'],['#1F5F8B','Above 0.2: moist, well-watered plants (water also scores high)']],
+      use:'Drought stress before plants turn brown, irrigation patterns, wildfire risk.'},
+    {id:'nbr', name:'NBR', full:'Normalized Burn Ratio', a:'B8', b:'B12', short:'burns',
+      science:'Fire destroys leaves, so <strong>NIR drops</strong>. It leaves dry, charred ground that <strong>reflects more shortwave infrared</strong>. Burned land is one of the few surfaces where SWIR beats NIR.',
+      stops:[[-1,'#5E0F0B'],[-0.15,'#C9532E'],[0.05,'#E8C77E'],[0.35,'#7FB069'],[1,'#2D6A3E']],
+      zones:[['#5E0F0B','Below −0.1: likely burned'],['#E8C77E','Around 0: bare soil, buildings'],['#2D6A3E','Above 0.3: healthy vegetation (water also scores high)']],
+      use:'Burned villages, crops and forests. Subtract after from before (dNBR) to measure burn severity.'},
+    {id:'ndbi', name:'NDBI', full:'Normalized Difference Built-up Index', a:'B11', b:'B8', short:'buildings',
+      science:'Concrete, asphalt and roofs <strong>reflect more shortwave infrared than near-infrared</strong>. Plants do the opposite. So built-up areas come out positive.',
+      stops:[[-1,'#1F6E3A'],[-0.2,'#8CBF4F'],[0,'#E9E4D4'],[0.1,'#D9A07A'],[1,'#8E2F2F']],
+      zones:[['#1F6E3A','Below 0: vegetation and water'],['#E9E4D4','Around 0: mixed'],['#8E2F2F','Above 0: built-up, but also bare and burned ground']],
+      use:'Urban growth, new settlements and camps, reconstruction. Always check with true color, since bare soil scores high too.'}
+  ];
+
+  function hex(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)]; }
+  function ramp(stops,v){
+    if(v<=stops[0][0]) return hex(stops[0][1]);
+    for(var i=1;i<stops.length;i++){ if(v<=stops[i][0]){ var a=stops[i-1],b=stops[i],t=(v-a[0])/(b[0]-a[0]),ca=hex(a[1]),cb=hex(b[1]); return [ca[0]+(cb[0]-ca[0])*t,ca[1]+(cb[1]-ca[1])*t,ca[2]+(cb[2]-ca[2])*t]; } }
+    return hex(stops[stops.length-1][1]);
+  }
+  function nd(a,b){ return (a-b)/(a+b); }
+  function fmt(v){ return (v>=0?'+':'−')+Math.abs(v).toFixed(2); }
+
+  // ---------- sunlight demo ----------
+  var sun=document.getElementById('sun');
+  function demo(){
+    var s=sun.value/100, N=48*s, R=4*s;
+    document.getElementById('sunv').textContent=sun.value+'%';
+    document.getElementById('barN').style.height=(N/48*180)+'px';
+    document.getElementById('barR').style.height=Math.max(4,R/48*180)+'px';
+    document.getElementById('vN').textContent=N.toFixed(0)+'%';
+    document.getElementById('vR').textContent=R.toFixed(1)+'%';
+    document.getElementById('diff').textContent=(N-R).toFixed(1);
+    document.getElementById('norm').textContent=nd(N,R).toFixed(2);
+  }
+  sun.addEventListener('input',demo); demo();
+
+  // ---------- landscape ----------
+  var W=60,H=36;
+  function rng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  function hash(a,b){ return rng(a*7919+b*104729+13)(); }
+  var R=rng(42), mat=[], noise=[];
+  for(var y=0;y<H;y++) for(var x=0;x<W;x++){
+    var m = hash(Math.floor(x/6),Math.floor(y/5))<0.62?'veg':'soil';
+    if(x>=40&&x<=53&&y>=3&&y<=13){ m='urban'; if(hash(x,y+500)<0.14) m='veg'; }
+    var yc=19+4*Math.sin(x/8)+1.5*Math.sin(x/3.3), isW=Math.abs(y-yc)<1.6;
+    var dx=x-15, dy=y-26, ang=Math.atan2(dy,dx), rr=Math.sqrt(dx*dx/1.8+dy*dy), edge=6.2+1.3*Math.sin(ang*3)+0.8*Math.sin(ang*5+1);
+    if(rr<edge&&!isW) m='burned';
+    if(isW) m='water';
+    mat.push(m); noise.push([0.88+R()*0.24,0.88+R()*0.24]);
+  }
+  var canvas=document.getElementById('map'), ctx=canvas.getContext('2d'), img=ctx.createImageData(W,H);
+  function pixVal(i,ix){ return nd(REFL[mat[i]][ix.a]*noise[i][0], REFL[mat[i]][ix.b]*noise[i][1]); }
+
+  // ---------- index UI ----------
+  var cur=INDICES[0], curSurf='veg';
+  var tabs=document.getElementById('tabs'), tabBtns=[];
+  INDICES.forEach(function(ix){
+    var b=document.createElement('button'); b.innerHTML=ix.name+'<small>'+ix.short+'</small>';
+    b.addEventListener('click',function(){ cur=ix; renderIndex(); });
+    tabs.appendChild(b); tabBtns.push([b,ix]);
+  });
+  var surfBox=document.getElementById('surf'), surfBtns=[];
+  MATS.forEach(function(m){
+    var b=document.createElement('button'); b.textContent=m.name;
+    b.addEventListener('click',function(){ curSurf=m.k; renderCalc(); });
+    surfBox.appendChild(b); surfBtns.push([b,m.k]);
+  });
+  function chip(bid){ return '<span class="b" style="background:'+BCOL[bid]+'">'+BNAME[bid]+'</span>'; }
+  function renderIndex(){
+    tabBtns.forEach(function(t){ t[0].setAttribute('aria-pressed', t[1]===cur?'true':'false'); });
+    document.getElementById('iname').textContent=cur.name+': '+cur.full;
+    document.getElementById('iformula').innerHTML='<span class="frac"><span class="num">'+chip(cur.a)+' − '+chip(cur.b)+'</span><span class="den">'+chip(cur.a)+' + '+chip(cur.b)+'</span></span><span style="font-size:.9rem;font-weight:500;font-stretch:100%;color:var(--muted)">Sentinel-2: '+cur.a+' and '+cur.b+'</span>';
+    document.getElementById('iscience').innerHTML='<p style="margin:0">'+cur.science+'</p>';
+    var st=cur.stops;
+    document.getElementById('gauge').style.background='linear-gradient(90deg,'+st.map(function(s){ return s[1]+' '+((s[0]+1)/2*100).toFixed(1)+'%'; }).join(',')+')';
+    document.getElementById('zones').innerHTML=cur.zones.map(function(z){ return '<li><i style="background:'+z[0]+'"></i>'+z[1]+'</li>'; }).join('');
+    document.getElementById('use').innerHTML='<h3>Stories it can support</h3><p style="margin:0">'+cur.use+'</p>';
+    renderCalc(); renderMap();
+  }
+  function renderCalc(){
+    surfBtns.forEach(function(s){ s[0].setAttribute('aria-pressed', s[1]===curSurf?'true':'false'); });
+    var A=REFL[curSurf][cur.a], B=REFL[curSurf][cur.b], v=nd(A,B);
+    var name=MATS.filter(function(m){return m.k===curSurf;})[0].name;
+    document.getElementById('calc').innerHTML=name+': '+BNAME[cur.a]+' reflects '+A+'%, '+BNAME[cur.b]+' reflects '+B+'%<br>'+
+      '<span class="eq">('+A+' − '+B+') ÷ ('+A+' + '+B+') = '+fmt(v)+'</span>';
+    var mk=document.getElementById('mk'); mk.style.left=((v+1)/2*100)+'%'; mk.setAttribute('data-v',fmt(v));
+  }
+  function renderMap(){
+    for(var i=0;i<W*H;i++){ var c=ramp(cur.stops,pixVal(i,cur)); img.data[i*4]=c[0]; img.data[i*4+1]=c[1]; img.data[i*4+2]=c[2]; img.data[i*4+3]=255; }
+    ctx.putImageData(img,0,0);
+  }
+  // hover
+  var tip=document.getElementById('tip'), names={}; MATS.forEach(function(m){ names[m.k]=m.name; });
+  function readout(e){
+    var r=canvas.getBoundingClientRect(), p=e.touches?e.touches[0]:e;
+    var cx=p.clientX-r.left, cy=p.clientY-r.top, x=Math.floor(cx/r.width*W), y=Math.floor(cy/r.height*H);
+    if(x<0||y<0||x>=W||y>=H){ tip.style.display='none'; return; }
+    var i=y*W+x; tip.textContent=names[mat[i]]+', '+cur.name+' '+fmt(pixVal(i,cur));
+    tip.style.display='block'; tip.style.left=cx+'px'; tip.style.top=cy+'px';
+  }
+  canvas.addEventListener('mousemove',readout);
+  canvas.addEventListener('touchstart',readout,{passive:true});
+  canvas.addEventListener('touchmove',readout,{passive:true});
+  canvas.addEventListener('mouseleave',function(){ tip.style.display='none'; });
+  renderIndex();
+})();
+</script>
+</body>
+</html>
