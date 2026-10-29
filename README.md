@@ -28,6 +28,7 @@ Paste a script into the [Earth Engine Code Editor](https://code.earthengine.goog
 | [3. Indices](earth-engine/3_indices_playground.js) | NDVI, NDWI, NDMI, NBR and NDBI before, after and as a difference, with a change threshold, an optional water mask and a click time series. |
 | [4. Coherence and change](earth-engine/4_coherence_damage.js) | Two ways to find physical change such as collapse, fire or earthworks. A: intensity correlation of Sentinel-1 backscatter before and after, which works out of the box. B: bring your own true InSAR coherence rasters made in SNAP or ASF HyP3 and compare pre-event and co-event coherence. |
 | [5. Elevation](earth-engine/5_elevation_playground.js) | Compare four free global elevation models (Copernicus GLO-30, SRTM, NASADEM, ALOS AW3D30), exaggerate relief, move the sun, draw contours, and click two points for an elevation profile, useful for checking what a camera could have seen. |
+| [6. Radar interference](earth-engine/6_radar_interference.js) | Spot ground radars that interfere with Sentinel-1, using the method of Bellingcat's Radar Interference Tracker. A max composite keeps the interference spikes: red for ascending passes, blue for descending, green for the terrain. A VH time series at the point shows the dates of the spikes. Starts over eastern Saudi Arabia; change the point and dates at the top and press **Run** again. |
 
 ## Copernicus Browser scripts
 
